@@ -1,7 +1,5 @@
-using UnityEditor.Tilemaps;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Vector2 = UnityEngine.Vector2;
 
 public class PlayerController : MonoBehaviour
 {
@@ -9,25 +7,23 @@ public class PlayerController : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Animator animator;
 
-    private Vector2 moveInput;
+    public float velocity = 4f;
+    public float jumpForce = 6f;
 
-    private bool isFacingRight = true;
-    private bool jumpPressed = false;
-
-
-    public float velocity;
-    public float jumpForce = 12f;
     public InputAction MoveAction;
     public InputAction JumpAction;
 
+    private Vector2 moveInput;
+    private bool canJump = true;
+    private bool isFacingRight = true;
 
-    private void Awake()
+    void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
     }
-  
+
     void OnEnable()
     {
         MoveAction.Enable();
@@ -36,50 +32,34 @@ public class PlayerController : MonoBehaviour
 
     void OnDisable()
     {
-        MoveAction.Enable();
-        JumpAction.Enable();
-    }
-
-    void FixedUpdate()
-    {
-        rb.linearVelocity = new Vector2(moveInput.x * velocity, rb.linearVelocity.y);
-
-        if (jumpPressed)
-        {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-            jumpPressed = false;
-        }
+        MoveAction.Disable();
+        JumpAction.Disable();
     }
 
     void Update()
     {
+        // MOVIMENTO
         moveInput = MoveAction.ReadValue<Vector2>();
-        jumpPressed = JumpAction.WasPressedThisFrame();
-        Vector2 position = (Vector2)transform.position + moveInput * velocity * Time.deltaTime;
-        transform.position = position;
+        rb.linearVelocity = new Vector2(moveInput.x * velocity, rb.linearVelocity.y);
 
+        animator.SetBool("isWalkingTrigger", moveInput.x != 0);
         Flip();
 
-        if (moveInput != Vector2.zero)
+        // --- PULO (IGUAL AO SCRIPT BASE) ---
+        canJump = Mathf.Abs(rb.linearVelocity.y) <= 0.001f;
+
+        if (canJump && JumpAction.IsPressed())
         {
-            Debug.Log("O jogador est� andando");
-            animator.SetBool("isWalkingTrigger", true);
+            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
         }
-        else {
-            Debug.Log("O jogador est� parado");
-            animator.SetBool("isWalkingTrigger", false);
-        }
-
-
     }
 
-    void Flip() {
+    void Flip()
+    {
         if (moveInput.x > 0 && !isFacingRight || moveInput.x < 0 && isFacingRight)
         {
             isFacingRight = !isFacingRight;
-
             spriteRenderer.flipX = !isFacingRight;
         }
     }
-
 }
